@@ -61,4 +61,4 @@ Thumbs.db
 \bipc_srlock
 
 # Avoid archives of this distribution
-\bWeb-Components-Role-Forms-v?[\d\.\_]+
+\bWeb-Components-Forms-v?[\d\.\_]+
