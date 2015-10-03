@@ -27,6 +27,7 @@ around 'get_stash' => sub {
 
    $stash->{form} = $form;
    $stash->{page}->{first_field} = $form->first_field;
+   $stash->{page}->{js_object  } = $form->js_object;
    $stash->{page}->{layout     } = $form->template;
 
    return $stash;

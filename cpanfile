@@ -6,6 +6,7 @@ requires "HTML::FormWidgets" => "v0.24.0";
 requires "HTTP::Message" => "6.06";
 requires "Moo" => "2.000001";
 requires "Try::Tiny" => "0.22";
+requires "Web::Components" => "v0.4.0";
 requires "namespace::autoclean" => "0.26";
 requires "perl" => "5.010001";
 
@@ -20,6 +21,7 @@ on 'test' => sub {
   requires "Module::Metadata" => "0";
   requires "Sys::Hostname" => "0";
   requires "Test::Requires" => "0.06";
+  requires "Web::ComposableRequest" => "v0.4.0";
   requires "version" => "0.88";
 };
 

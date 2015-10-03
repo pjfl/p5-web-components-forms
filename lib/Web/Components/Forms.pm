@@ -2,9 +2,9 @@ package Web::Components::Forms;
 
 use 5.010001;
 use namespace::autoclean;
-use version; our $VERSION = qv( sprintf '0.1.%d', q$Rev: 2 $ =~ /\d+/gmx );
+use version; our $VERSION = qv( sprintf '0.1.%d', q$Rev: 3 $ =~ /\d+/gmx );
 
-use Class::Usul::Constants  qw( EXCEPTION_CLASS CONFIG_EXTN TRUE );
+use Class::Usul::Constants  qw( EXCEPTION_CLASS CONFIG_EXTN NUL TRUE );
 use Class::Usul::Functions  qw( is_arrayref is_hashref throw );
 use Class::Usul::Types      qw( ArrayRef CodeRef HashRef Int
                                 NonEmptySimpleStr SimpleStr Object Str );
@@ -66,7 +66,7 @@ has 'model'        => is => 'ro',   isa => Object, required => TRUE;
 has 'name'         => is => 'ro',   isa => NonEmptySimpleStr, required => TRUE;
 
 has 'ns'           => is => 'lazy', isa => NonEmptySimpleStr,
-   builder         => sub { $_[ 0 ]->req->domain };
+   builder         => sub { $_[ 0 ]->request->domain };
 
 has 'pwidth'       => is => 'ro',   isa => Int, default => 40;
 
@@ -88,8 +88,8 @@ has 'template_dir' => is => 'lazy', isa => Directory, coerce => TRUE,
 has 'uri_for'      => is => 'lazy', isa => CodeRef, builder => $_build_uri_for;
 
 has 'width'        => is => 'lazy', isa => Int, builder => sub {
-   $_[ 0 ]->req->can( 'get_cookie_hash' ) or return 1_024;
-   $_[ 0 ]->req->get_cookie_hash( 'mcp_state' )->{width} // 1_024 };
+   $_[ 0 ]->request->can( 'get_cookie_hash' ) or return 1_024;
+   $_[ 0 ]->request->get_cookie_hash( 'mcp_state' )->{width} // 1_024 };
 
 # Private functions
 my $_extract_value = sub {
@@ -193,14 +193,18 @@ sub load_config { # Class method
    my ($class, $model, $req, $domain) = @_;
 
    defined $model or throw Unspecified, [ 'model' ];
-   defined $req   or throw Unspecified, [ 'request' ]; $domain //= $req->domain;
+   defined $req   or throw Unspecified, [ 'request' ];
+
+   $domain //= $req->domain; defined $domain or throw Unspecified, [ 'domain' ];
 
    my $language = $req->language; my $key = "${domain}.${language}";
 
    exists $_config_cache->{ $key } and return $_config_cache->{ $key };
 
    my $conf     = $model->config;
-   my $def_path = $conf->sharedir->catfile( 'forms'.CONFIG_EXTN );
+   my $file     = $conf->can( 'default_form_file' )
+                ? $conf->default_form_file : 'forms';
+   my $def_path = $conf->sharedir->catfile( $file.CONFIG_EXTN );
    my $ns_path  = $conf->sharedir->catfile( $domain.CONFIG_EXTN );
    my @paths    = ($def_path);
 
@@ -210,11 +214,11 @@ sub load_config { # Class method
    if ($ns_path->exists) { push @paths, $ns_path }
    else { $model->log->debug( "File ${ns_path} not found" ) }
 
-   my $schema     =  File::Gettext::Schema->new( {
-      builder     => $model,
-      cache_class => 'none',
-      language    => $language,
-      localedir   => $conf->localedir } );
+   my $schema = File::Gettext::Schema->new( {
+      builder          => $model,
+      cache_class      => 'none',
+      gettext_catagory => $conf->l10n_attributes->{gettext_catagory} // NUL,
+      language         => $language, } );
 
    return $_config_cache->{ $key } = $schema->load( @paths );
 }

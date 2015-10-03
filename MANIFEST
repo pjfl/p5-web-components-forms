@@ -2,10 +2,10 @@ Build.PL
 Changes
 MANIFEST
 lib/Web/Components/Forms.pm
+lib/Web/Components/Forms/Demo.pm
 lib/Web/Components/Forms/Field.pm
 lib/Web/Components/Role/Forms.pm
 lib/Web/Components/Role/Forms/Chooser.pm
-lib/Web/Components/Role/Forms/Demo.pm
 lib/Web/Components/Role/Forms/View.pm
 t/02pod.t
 t/03podcoverage.t
@@ -14,3 +14,9 @@ t/06yaml.t
 t/07podspelling.t
 t/10test_script.t
 t/boilerplate.pm
+t/en/forms.po
+t/forms.json
+t/script.log
+t/templates/default/footer.tt
+t/templates/default/forms.tt
+t/templates/default/wrapper.tt

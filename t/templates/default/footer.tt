@@ -1,0 +1,16 @@
+   <!-- JavaScript -->
+[% FOREACH file = scripts -%]
+   <script src="[% links.js %][% file %]"></script>
+[% END -%]
+   <script type="text/javascript"><!--//--><![CDATA[//><!--
+      var [% page.js_object %] = new Behaviour( {
+         baseURI     : '[% links.base_uri %]',
+         cookieDomain: '[% req.domain %]',
+         cookiePath  : '[% config.mount_point %]',
+         cookiePrefix: '[% config.prefix %]',
+         firstField  : '[% page.first_field %]',
+         formName    : '[% page.form_name %]' } );
+[% FOREACH line = page.literal_js; -%]
+      [%+ line | eval %]
+[% END -%]
+   //--><!]]></script>

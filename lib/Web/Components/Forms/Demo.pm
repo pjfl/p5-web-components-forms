@@ -1,8 +1,30 @@
-package Web::Components::Role::Forms::Demo;
+package Web::Components::Forms::Demo;
 
 use namespace::autoclean;
 
-use Moo::Role;
+use HTTP::Status qw( HTTP_OK );
+use Moo;
+
+with 'Web::Components::Role';
+with 'Web::Components::Role::Forms';
+
+has '+moniker' => default => 'demo';
+
+sub get_stash {
+   my ($self, $req, $page) = @_; my $stash = $self->initialise_stash( $req );
+
+   $stash->{page} = $self->load_page( $req, $page );
+
+   return $stash;
+}
+
+sub initialise_stash {
+   return { code => HTTP_OK, skin => 'default', view => 'HTML', };
+}
+
+sub load_page {
+   my ($self, $req, $page) = @_; $page //= {}; return $page;
+}
 
 1;
 
@@ -14,7 +36,7 @@ __END__
 
 =head1 Name
 
-Web::Components::Role::Forms::Demo - Demonstrate the form handler
+Web::Components::Forms::Demo - Demonstrate the form handler
 
 =head1 Synopsis
 
@@ -38,6 +60,14 @@ Defines the following attributes;
 =back
 
 =head1 Subroutines/Methods
+
+=head2 C<BUILDARGS>
+
+=head2 C<get_stash>
+
+=head2 C<initialise_stash>
+
+=head2 C<load_page>
 
 =head1 Diagnostics
 

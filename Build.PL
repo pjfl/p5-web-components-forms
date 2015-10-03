@@ -23,6 +23,7 @@ my $prereqs  = {
     'HTTP::Message' => '6.06',
     'Moo' => '2.000001',
     'Try::Tiny' => '0.22',
+    'Web::Components' => 'v0.4.0',
     'namespace::autoclean' => '0.26',
     'perl' => '5.010001'
   },
@@ -32,6 +33,7 @@ my $prereqs  = {
     'Module::Metadata' => '0',
     'Sys::Hostname' => '0',
     'Test::Requires' => '0.06',
+    'Web::ComposableRequest' => 'v0.4.0',
     'version' => '0.88'
   },
 };
