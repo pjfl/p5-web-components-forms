@@ -1,5 +1,6 @@
 Revision history for Web::Components::Forms
 
+          - Renamed Fields key_value to value
           - Passes tests
           - Added code and documented
 

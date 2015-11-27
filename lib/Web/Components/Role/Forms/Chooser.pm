@@ -20,8 +20,7 @@ my $_new_grid_table = sub {
       fields   => [ 'item_num', 'item' ],
       hclass   => { item     => 'grid_header most',
                     item_num => 'grid_header minimal first', },
-      labels   => { item     => $label // 'Select Item',
-                    item_num => char( 35 ), },
+      labels   => { item     => $label // 'Select Item', item_num => chr 35, },
       typelist => { item_num => 'numeric', },
       values   => $values,
    } );
@@ -62,14 +61,15 @@ my $_new_grid_row = sub {
 
 # Public methods
 sub build_chooser {
-   my ($self, $req) = @_; my $params = $req->query_params;
+   my ($self, $req, $args) = @_; my $params = $req->query_params; $args //= {};
 
    my $form    = $params->( 'form'  );
    my $field   = $params->( 'field' );
    my $button  = $params->( 'button', { optional => TRUE } ) // NUL;
    my $event   = $params->( 'event',  { optional => TRUE } ) || 'load';
-   my $fval    = $params->( 'val',    {
-      optional => TRUE, scrubber => '[^ \%\*+\-\./0-9@A-Z\\_a-z~]' } ) // NUL;
+   my $p_opts  = { optional => TRUE }; $args->{scrubber}
+      and $p_opts->{scrubber} = $args->{scrubber};
+   my $fval    = $params->( 'val', $p_opts ) // NUL;
    my $toggle  = $params->( 'toggle', { optional => TRUE } ) ? 'true' : 'false';
    my $show    = "function() { this.window.dialogs[ '${field}' ].show() }";
    my $id      = "${form}_${field}";
@@ -117,8 +117,9 @@ sub build_chooser_table {
    my $form   = $args->{form};
    my $field  = $params->( 'id' );
    my $psize  = $params->( 'page_size' ) || 10;
-   my $fval   = $params->( 'field_value', {
-      optional => TRUE, scrubber => '[^ \%\*+\-\./0-9@A-Z\\_a-z~]' } ) // NUL;
+   my $p_opts = { optional => TRUE }; $args->{scrubber}
+      and $p_opts->{scrubber} = $args->{scrubber};
+   my $fval   = $params->( 'field_value', $p_opts ) // NUL;
    my $label  = $req->loc( $args->{label} );
    my $id     = "${form}_${field}";
    my $count  = 0;

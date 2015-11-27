@@ -2,7 +2,7 @@ package Web::Components::Forms;
 
 use 5.010001;
 use namespace::autoclean;
-use version; our $VERSION = qv( sprintf '0.1.%d', q$Rev: 3 $ =~ /\d+/gmx );
+use version; our $VERSION = qv( sprintf '0.1.%d', q$Rev: 4 $ =~ /\d+/gmx );
 
 use Class::Usul::Constants  qw( EXCEPTION_CLASS CONFIG_EXTN NUL TRUE );
 use Class::Usul::Functions  qw( is_arrayref is_hashref throw );
@@ -41,11 +41,22 @@ my $_build_uri_for = sub {
    return sub { $req->uri_for( @_ ) };
 };
 
+my $_build_width = sub {
+   my $self = shift; my $req = $self->request;
+
+   $req->can( 'get_cookie_hash' ) or return 1_024;
+
+   my $conf   = $self->model->config;
+   my $cookie = $conf->can( 'state_cookie' ) ? $conf->state_cookie : 'state';
+
+   return $req->get_cookie_hash( $cookie )->{width} // 1_024;
+};
+
 # Public attributes
-has 'config'       => is => 'ro',   isa => HashRef, default => sub { {} };
+has 'config'       => is => 'ro',   isa => HashRef, builder => sub { {} };
 
 has 'data'         => is => 'ro',   isa => ArrayRef[HashRef],
-   default         => sub { [] };
+   builder         => sub { [] };
 
 has 'first_field'  => is => 'ro',   isa => SimpleStr;
 
@@ -57,7 +68,7 @@ has 'l10n'         => is => 'lazy', isa => CodeRef, builder => $_build_l10n;
 has 'list_key'     => is => 'ro',   isa => NonEmptySimpleStr,
    default         => 'fields';
 
-has 'literal_js'   => is => 'ro',   isa => ArrayRef[Str], default => sub { [] };
+has 'literal_js'   => is => 'ro',   isa => ArrayRef[Str], builder => sub { [] };
 
 has 'max_pwidth'   => is => 'ro',   isa => Int, default => 1_024;
 
@@ -87,15 +98,11 @@ has 'template_dir' => is => 'lazy', isa => Directory, coerce => TRUE,
 
 has 'uri_for'      => is => 'lazy', isa => CodeRef, builder => $_build_uri_for;
 
-has 'width'        => is => 'lazy', isa => Int, builder => sub {
-   $_[ 0 ]->request->can( 'get_cookie_hash' ) or return 1_024;
-   $_[ 0 ]->request->get_cookie_hash( 'mcp_state' )->{width} // 1_024 };
+has 'width'        => is => 'lazy', isa => Int, builder => $_build_width;
 
 # Private functions
 my $_extract_value = sub {
-   my ($field, $src) = @_;
-
-   my $value = $field->key_value; my $col = $field->name;
+   my ($field, $src) = @_; my $col = $field->name; my $value = $field->value;
 
    if  ($src and blessed $src and $src->can( $col )) { $value = $src->$col()   }
    elsif (is_hashref $src and exists $src->{ $col }) { $value = $src->{ $col } }
@@ -132,7 +139,7 @@ my $_assign_value = sub {
    defined $value or return;
 
    if (is_hashref $value) { $field->add_properties( $value ) }
-   else { $field->key_value( "${value}" ) }
+   else { $field->value( "${value}" ) }
 
    return;
 };
@@ -343,7 +350,7 @@ that contains the validation parameters
 
 =item C<skin>
 
-A lazily evaluated non empty simple string which defaults to configuration
+A lazily evaluated non empty simple string which defaults to the configuration
 value provided by the model. See L</template_dir>
 
 =item C<template>
@@ -362,7 +369,7 @@ provide a function that generates URI objects from partial paths
 =item C<width>
 
 A lazily evaluated integer that defaults to 1024 but will be overridden
-by the value in cookie if one is provided by the request object. The
+by the value in the cookie if one is provided by the request object. The
 size in pixels of the users browser window
 
 =back

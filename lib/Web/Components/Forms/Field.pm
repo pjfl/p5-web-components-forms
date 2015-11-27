@@ -9,7 +9,7 @@ use Moo;
 
 has 'properties' => is => 'ro', isa => HashRef, required => TRUE;
 
-my $_get_key = sub {
+my $_key_attribute = sub {
    my $self = shift; my $type = $self->properties->{type} // NUL;
 
    return $type eq 'button'  ? 'name'
@@ -42,12 +42,12 @@ sub add_properties {
    return;
 }
 
-sub key_value {
+sub value {
    my ($self, $v) = @_;
 
-   defined $v and return $self->properties->{ $self->$_get_key } = $v;
+   defined $v and return $self->properties->{ $self->$_key_attribute } = $v;
 
-   return $self->properties->{ $self->$_get_key };
+   return $self->properties->{ $self->$_key_attribute };
 }
 
 sub name {
@@ -98,7 +98,7 @@ Sets the fields property attributes from the passed configuration
 
 Adds the keys and values passed to the L</properties> attribute
 
-=head2 C<key_value>
+=head2 C<value>
 
 For each properties C<type> attribute value there is a key attribute. This
 method is an accessor / mutator for that property attribute value
