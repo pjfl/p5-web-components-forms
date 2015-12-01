@@ -1,5 +1,7 @@
 Revision history for Web::Components::Forms
 
+          - Added optional_js
+          - Renamed variables
           - Renamed Fields key_value to value
           - Passes tests
           - Added code and documented

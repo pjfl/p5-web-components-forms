@@ -2,7 +2,7 @@ package Web::Components::Forms;
 
 use 5.010001;
 use namespace::autoclean;
-use version; our $VERSION = qv( sprintf '0.1.%d', q$Rev: 4 $ =~ /\d+/gmx );
+use version; our $VERSION = qv( sprintf '0.1.%d', q$Rev: 5 $ =~ /\d+/gmx );
 
 use Class::Usul::Constants  qw( EXCEPTION_CLASS CONFIG_EXTN NUL TRUE );
 use Class::Usul::Functions  qw( is_arrayref is_hashref throw );
@@ -15,9 +15,19 @@ use Unexpected::Functions   qw( Unspecified );
 use Web::Components::Forms::Field;
 use Moo;
 
+# Requires model->log
+# Requires model->config->l10n_attributes, ->root, and ->sharedir
+
 # Private package variables
 my $_config_cache = {};
 my $_l10n_cache   = {};
+
+# Private methods
+my $_model_config = sub {
+   my ($self, $name, $default) = @_; my $conf = $self->model->config;
+
+   return $conf->can( $name ) ? $conf->$name() : $default;
+};
 
 # Attribute constructors
 my $_build_l10n = sub {
@@ -46,8 +56,7 @@ my $_build_width = sub {
 
    $req->can( 'get_cookie_hash' ) or return 1_024;
 
-   my $conf   = $self->model->config;
-   my $cookie = $conf->can( 'state_cookie' ) ? $conf->state_cookie : 'state';
+   my $cookie = $self->$_model_config( 'state_cookie', 'state' );
 
    return $req->get_cookie_hash( $cookie )->{width} // 1_024;
 };
@@ -60,8 +69,8 @@ has 'data'         => is => 'ro',   isa => ArrayRef[HashRef],
 
 has 'first_field'  => is => 'ro',   isa => SimpleStr;
 
-has 'js_object'    => is => 'ro',   isa => NonEmptySimpleStr,
-   default         => 'behaviour';
+has 'js_object'    => is => 'lazy', isa => NonEmptySimpleStr,
+   builder         => sub { $_[ 0 ]->$_model_config( 'js_object', 'behaviour')};
 
 has 'l10n'         => is => 'lazy', isa => CodeRef, builder => $_build_l10n;
 
@@ -79,6 +88,8 @@ has 'name'         => is => 'ro',   isa => NonEmptySimpleStr, required => TRUE;
 has 'ns'           => is => 'lazy', isa => NonEmptySimpleStr,
    builder         => sub { $_[ 0 ]->request->domain };
 
+has 'optional_js'  => is => 'ro',   isa => ArrayRef[Str], builder => sub { [] };
+
 has 'pwidth'       => is => 'ro',   isa => Int, default => 40;
 
 has 'request'      => is => 'ro',   isa => Object, required => TRUE,
@@ -87,10 +98,10 @@ has 'request'      => is => 'ro',   isa => Object, required => TRUE,
 has 'result_class' => is => 'ro',   isa => SimpleStr;
 
 has 'skin'         => is => 'lazy', isa => NonEmptySimpleStr,
-   builder         => sub { $_[ 0 ]->model->config->skin };
+   builder         => sub { $_[ 0 ]->$_model_config( 'skin', 'default' ) };
 
-has 'template'     => is => 'ro',   isa => NonEmptySimpleStr,
-   default         => 'forms';
+has 'template'     => is => 'lazy', isa => NonEmptySimpleStr,
+   builder         => sub { $_[ 0 ]->$_model_config( 'form_template', 'forms')};
 
 has 'template_dir' => is => 'lazy', isa => Directory, coerce => TRUE,
    builder         => sub {
@@ -101,52 +112,41 @@ has 'uri_for'      => is => 'lazy', isa => CodeRef, builder => $_build_uri_for;
 has 'width'        => is => 'lazy', isa => Int, builder => $_build_width;
 
 # Private functions
-my $_extract_value = sub {
-   my ($field, $src) = @_; my $col = $field->name; my $value = $field->value;
-
-   if  ($src and blessed $src and $src->can( $col )) { $value = $src->$col()   }
-   elsif (is_hashref $src and exists $src->{ $col }) { $value = $src->{ $col } }
-
-   return $value;
-};
-
 my $_field_list = sub {
-   my ($conf, $fields, $src) = @_; my $names;
+   my ($conf, $region, $src) = @_; my $names;
 
-   if (is_arrayref $fields) {
-      $names = $fields->[ 0 ]
-             ? $fields
-             : [ sort grep  { not m{ \A (?: _ | meta ) \z }mx }
-                      keys %{ $src // {} } ];
+   if (is_arrayref $region) {
+      $names = $region->[ 0 ]
+             ? $region
+             : [ sort grep { not m{ \A meta \z }mx } keys %{ $src // {} } ];
    }
-   else { $names = $conf->{ $fields } };
+   else { $names = $conf->{ $region } // [] };
 
    return grep { not m{ \A (?: _ | related_resultsets ) }mx } @{ $names };
 };
 
 # Private methods
 my $_assign_value = sub {
-   my ($self, $field, $src) = @_;
+   my ($self, $field, $src) = @_; my $v = $field->value;
 
-   my $value = $_extract_value->( $field, $src );
-   my $name  = $field->name; $name =~ s{ \. }{_}gmx;
-   my $hook  = '_'.$self->name."_${name}_assign_hook";
-   my $code  = $self->model->can( $hook );
+   my $fname = $field->name; $fname =~ s{ \. }{_}gmx;
 
-   $code and $value
-      = $code->( $self->model, $self->request, $field, $src, $value );
+   if  ($src and blessed $src and $src->can( $fname )) { $v = $src->$fname()   }
+   elsif (is_hashref $src and exists $src->{ $fname }) { $v = $src->{ $fname } }
 
-   defined $value or return;
+   my $hook  = $self->model->can( '_'.$self->name."_${fname}_assign_hook" );
 
-   if (is_hashref $value) { $field->add_properties( $value ) }
-   else { $field->value( "${value}" ) }
+   $hook and $v = $hook->( $self->model, $self->request, $field, $src, $v );
+
+   if (is_hashref $v) { $field->add_properties( $v ) }
+   elsif (defined $v) { $field->value( "${v}" ) }
 
    return;
 };
 
 # Construction
 around 'BUILDARGS' => sub {
-   my ($orig, $self, $args) = @_; my $attr = { %{ $args } };
+   my ($orig, $self, @args) = @_; my $attr = $orig->( $self, @args );
 
    $attr->{config} //= $self->load_config( $attr->{model}, $attr->{request} );
 
@@ -163,34 +163,35 @@ around 'BUILDARGS' => sub {
 };
 
 sub BUILD {
-   my ($self, $attr) = @_; my $cache = {}; my $config = $self->config;
+   my ($self, $attr) = @_; my $cache = {}; my $conf = $self->config;
 
-   my $count = 0; my $form_name = $self->name; my $src = $attr->{source};
+   my $count = 0; my $form_name = $self->name; my @hooks;
+
+   my $model = $self->model; my $src = $attr->{source};
 
    # Visit the lazy so ::FormHandler can pass $self to HTML::FormWidgets->build
    $self->l10n; $self->ns; $self->template_dir; $self->uri_for; $self->width;
 
-   my @hooks;
+   for my $region (@{ $conf->{ $form_name }->{regions} // [] }) {
+      my $data = $self->data->[ $count++ ] = { fields => [] };
 
-   for my $fields (@{ $config->{ $form_name }->{regions} }) {
-      my $region = $self->data->[ $count++ ] = { fields => [] };
-
-      for my $name ($_field_list->( $config->{_fields}, $fields, $src )) {
-         my $field = $cache->{ $name } = Web::Components::Forms::Field->new
-            ( $config->{_fields}, $form_name, $name );
+      for my $field_name ($_field_list->( $conf->{_fields}, $region, $src )) {
+         my $field = Web::Components::Forms::Field->new
+            ( $conf->{_fields}, $form_name, $field_name );
 
          $self->$_assign_value( $field, $src );
 
-         push @{ $region->{fields} }, { content => $field->properties };
+         push @{ $data->{fields} }, { content => $field->properties };
 
-         my $code = $self->model->can( "_${form_name}_${name}_field_hook" );
+         my $hook = $model->can( "_${form_name}_${field_name}_field_hook" );
 
-         $code and push @hooks, [ $name, $code ];
+         $hook and push @hooks, [ $field_name, $hook ];
+         $cache->{ $field_name } = $field;
       }
    }
 
    for my $tuple (@hooks) {
-      $tuple->[ 1 ]->( $self->model, $self->request, $cache, $tuple->[ 0 ] );
+      $tuple->[ 1 ]->( $model, $self->request, $cache, $tuple->[ 0 ] );
    }
 
    return;
@@ -209,17 +210,16 @@ sub load_config { # Class method
    exists $_config_cache->{ $key } and return $_config_cache->{ $key };
 
    my $conf     = $model->config;
-   my $file     = $conf->can( 'default_form_file' )
-                ? $conf->default_form_file : 'forms';
+   my $file     = $conf->can( 'form_data' ) ? $conf->form_data : 'forms';
    my $def_path = $conf->sharedir->catfile( $file.CONFIG_EXTN );
-   my $ns_path  = $conf->sharedir->catfile( $domain.CONFIG_EXTN );
+   my $dom_path = $conf->sharedir->catfile( $domain.CONFIG_EXTN );
    my @paths    = ($def_path);
 
    $def_path->exists or ($model->log->error( "File ${def_path} not found" )
                          and return {});
 
-   if ($ns_path->exists) { push @paths, $ns_path }
-   else { $model->log->debug( "File ${ns_path} not found" ) }
+   if ($dom_path->exists) { push @paths, $dom_path }
+   else { $model->log->debug( "File ${dom_path} not found" ) }
 
    my $schema = File::Gettext::Schema->new( {
       builder          => $model,
@@ -332,6 +332,12 @@ A lazily evaluated non empty simple string which defaults to the value of the
 request objects C<domain> attribute. Form configuration can be stored in a
 common file or in model specific file. The model name (moniker) is stored
 on the request and used for this purpose
+
+=item C<optional_js>
+
+The list of Javascript filenames (with extension, without path) are added
+to the list of files which will be included on the page. An array reference
+of strings
 
 =item C<pwidth>
 

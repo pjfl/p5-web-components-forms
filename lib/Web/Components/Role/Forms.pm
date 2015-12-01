@@ -17,13 +17,13 @@ requires qw( log );
 around 'get_stash' => sub {
    my ($orig, $self, $req, $page, $form_name, $source) = @_;
 
-   my $stash  =  $orig->( $self, $req, $page ); $form_name or return $stash;
-   my $form   =  Web::Components::Forms->new( {
-      model   => $self,
-      name    => $form_name,
-      request => $req,
-      skin    => $stash->{skin},
-      source  => $source, } );
+   my $stash = $orig->( $self, $req, $page ); $form_name or return $stash;
+   my $form  = Web::Components::Forms->new
+      ( model   => $self,
+        name    => $form_name,
+        request => $req,
+        skin    => $stash->{skin},
+        source  => $source, );
 
    $stash->{form} = $form;
    $stash->{page}->{first_field} = $form->first_field;

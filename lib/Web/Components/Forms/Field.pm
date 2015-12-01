@@ -7,8 +7,25 @@ use Class::Usul::Functions qw( first_char );
 use Class::Usul::Types     qw( HashRef );
 use Moo;
 
+# Public attributes
 has 'properties' => is => 'ro', isa => HashRef, required => TRUE;
 
+# Construction
+around 'BUILDARGS' => sub {
+   my ($orig, $self, $conf, $form_name, $field_name) = @_;
+
+   my $fqfn  = first_char $field_name eq '+'
+             ? substr $field_name, 1 : "${form_name}.${field_name}";
+   my $props = { %{ $conf->{ $fqfn } // {} } }; $field_name =~ s{ \A \+ }{}mx;
+
+   exists $props->{name} or $props->{name} = $field_name;
+   exists $props->{form} or exists $props->{group} or exists $props->{widget}
+       or $props->{widget} = TRUE;
+
+   return { properties => $props };
+};
+
+# Private methods
 my $_key_attribute = sub {
    my $self = shift; my $type = $self->properties->{type} // NUL;
 
@@ -19,25 +36,11 @@ my $_key_attribute = sub {
                              : 'default';
 };
 
-around 'BUILDARGS' => sub {
-   my ($orig, $self, $fields, $form_name, $name) = @_;
-
-   my $fqfn  = first_char $name eq '+'
-             ? substr $name, 1 : "${form_name}.${name}";
-   my $props = { %{ $fields->{ $fqfn } // {} } };
-   my $col   = $name; $col =~ s{ \A \+ }{}mx;
-
-   exists $props->{name} or $props->{name} = $col;
-   exists $props->{form} or exists $props->{group} or exists $props->{widget}
-       or $props->{widget} = TRUE;
-
-   return { properties => $props };
-};
-
+# Public methods
 sub add_properties {
-   my ($self, $value) = @_; my $props = $self->properties;
+   my ($self, $v) = @_; my $props = $self->properties;
 
-   $props->{ $_ } = $value->{ $_ } for (keys %{ $value });
+   $props->{ $_ } = $v->{ $_ } for (keys %{ $v });
 
    return;
 }

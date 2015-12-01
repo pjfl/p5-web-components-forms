@@ -9,12 +9,14 @@ use Moo::Role;
 requires qw( serialize );
 
 around 'serialize' => sub {
-   my ($orig, $self, $req, $stash) = @_;
+   my ($orig, $self, $req, $stash) = @_; my $form;
 
-   if (exists $stash->{form} and blessed $stash->{form}) {
-      my $widgets = HTML::FormWidgets->build( $stash->{form} );
+   if (exists $stash->{form} and $form = $stash->{form} and blessed $form) {
+      my $widgets = HTML::FormWidgets->build( $form );
 
-      $stash->{page}->{literal_js} = $stash->{form}->{literal_js};
+      $stash->{page}->{literal_js} = $form->literal_js;
+      $form->optional_js->[ 0 ]
+         and push @{ $stash->{scripts} }, @{ $form->optional_js };
       $stash->{form} = $widgets;
    }
 
