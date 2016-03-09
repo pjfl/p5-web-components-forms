@@ -91,6 +91,12 @@ Defines the following attributes;
     common file or in model specific file. The model name (moniker) is stored
     on the request and used for this purpose
 
+- `optional_js`
+
+    The list of Javascript filenames (with extension, without path) are added
+    to the list of files which will be included on the page. An array reference
+    of strings
+
 - `pwidth`
 
     An immutable integer which defaults to 40. The size (as a percentage of the
@@ -108,7 +114,7 @@ Defines the following attributes;
 
 - `skin`
 
-    A lazily evaluated non empty simple string which defaults to configuration
+    A lazily evaluated non empty simple string which defaults to the configuration
     value provided by the model. See ["template\_dir"](#template_dir)
 
 - `template`
@@ -127,7 +133,7 @@ Defines the following attributes;
 - `width`
 
     A lazily evaluated integer that defaults to 1024 but will be overridden
-    by the value in cookie if one is provided by the request object. The
+    by the value in the cookie if one is provided by the request object. The
     size in pixels of the users browser window
 
 # Subroutines/Methods

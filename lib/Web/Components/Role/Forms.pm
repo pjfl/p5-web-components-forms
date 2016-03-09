@@ -2,7 +2,7 @@ package Web::Components::Role::Forms;
 
 use namespace::autoclean;
 
-use Class::Usul::Constants qw( TRUE );
+use Class::Usul::Constants qw( NUL TRUE );
 use Class::Usul::Functions qw( ensure_class_loaded first_char );
 use Data::Validation;
 use HTTP::Status           qw( HTTP_OK );
@@ -11,24 +11,20 @@ use Try::Tiny;
 use Web::Components::Forms;
 use Moo::Role;
 
-requires qw( log );
+requires qw( get_stash log );
 
 # Construction
 around 'get_stash' => sub {
    my ($orig, $self, $req, $page, $form_name, $source) = @_;
 
-   my $stash = $orig->( $self, $req, $page ); $form_name or return $stash;
-   my $form  = Web::Components::Forms->new
+   my $stash = $orig->( $self, $req, $page );
+
+   $form_name and $stash->{form} = Web::Components::Forms->new
       ( model   => $self,
         name    => $form_name,
         request => $req,
-        skin    => $stash->{skin},
+        stash   => $stash,
         source  => $source, );
-
-   $stash->{form} = $form;
-   $stash->{page}->{first_field} = $form->first_field;
-   $stash->{page}->{js_object  } = $form->js_object;
-   $stash->{page}->{layout     } = $form->template;
 
    return $stash;
 };
@@ -254,7 +250,7 @@ Peter Flanigan, C<< <pjfl@cpan.org> >>
 
 =head1 License and Copyright
 
-Copyright (c) 2015 Peter Flanigan. All rights reserved
+Copyright (c) 2016 Peter Flanigan. All rights reserved
 
 This program is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself. See L<perlartistic>

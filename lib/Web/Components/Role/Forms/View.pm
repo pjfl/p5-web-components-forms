@@ -13,8 +13,13 @@ around 'serialize' => sub {
 
    if (exists $stash->{form} and $form = $stash->{form} and blessed $form) {
       my $widgets = HTML::FormWidgets->build( $form );
+      my $page    = $stash->{page};
 
-      $stash->{page}->{literal_js} = $form->literal_js;
+      $page->{first_field} = $form->first_field;
+      $page->{hidden     } = $form->hidden;
+      $page->{js_object  } = $form->js_object;
+      $page->{layout     } = $form->template;
+      $page->{literal_js } = $form->literal_js;
       $form->optional_js->[ 0 ]
          and push @{ $stash->{scripts} }, @{ $form->optional_js };
       $stash->{form} = $widgets;
@@ -95,7 +100,7 @@ Peter Flanigan, C<< <pjfl@cpan.org> >>
 
 =head1 License and Copyright
 
-Copyright (c) 2015 Peter Flanigan. All rights reserved
+Copyright (c) 2016 Peter Flanigan. All rights reserved
 
 This program is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself. See L<perlartistic>

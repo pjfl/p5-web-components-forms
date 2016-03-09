@@ -2,7 +2,7 @@ package Web::Components::Forms;
 
 use 5.010001;
 use namespace::autoclean;
-use version; our $VERSION = qv( sprintf '0.1.%d', q$Rev: 5 $ =~ /\d+/gmx );
+use version; our $VERSION = qv( sprintf '0.1.%d', q$Rev: 6 $ =~ /\d+/gmx );
 
 use Class::Usul::Constants  qw( EXCEPTION_CLASS CONFIG_EXTN NUL TRUE );
 use Class::Usul::Functions  qw( is_arrayref is_hashref throw );
@@ -62,12 +62,16 @@ my $_build_width = sub {
 };
 
 # Public attributes
+has 'assets'       => is => 'ro',   isa => SimpleStr, default => NUL;
+
 has 'config'       => is => 'ro',   isa => HashRef, builder => sub { {} };
 
 has 'data'         => is => 'ro',   isa => ArrayRef[HashRef],
    builder         => sub { [] };
 
 has 'first_field'  => is => 'ro',   isa => SimpleStr;
+
+has 'hidden'       => is => 'ro',   isa => HashRef, builder => sub { {} };
 
 has 'js_object'    => is => 'lazy', isa => NonEmptySimpleStr,
    builder         => sub { $_[ 0 ]->$_model_config( 'js_object', 'behaviour')};
@@ -159,6 +163,10 @@ around 'BUILDARGS' => sub {
 
    $attr->{ $_ } //= $defaults->{ $_ } for (keys %{ $defaults });
 
+   my $stash = $attr->{stash} // {}; my $links = $stash->{links} // {};
+
+   $attr->{assets} //= ($links->{images} // NUL).NUL;
+   $attr->{skin  } //= $stash->{skin};
    return $attr;
 };
 
@@ -170,7 +178,8 @@ sub BUILD {
    my $model = $self->model; my $src = $attr->{source};
 
    # Visit the lazy so ::FormHandler can pass $self to HTML::FormWidgets->build
-   $self->l10n; $self->ns; $self->template_dir; $self->uri_for; $self->width;
+   $self->js_object;    $self->l10n;    $self->ns;
+   $self->template_dir; $self->uri_for; $self->width;
 
    for my $region (@{ $conf->{ $form_name }->{regions} // [] }) {
       my $data = $self->data->[ $count++ ] = { fields => [] };
@@ -272,6 +281,11 @@ Defines the following attributes;
 
 =over 3
 
+=item C<assets>
+
+The URI of the directory containing image files used by some of the form
+widgets
+
 =item C<config>
 
 An immutable hash reference. Defaults empty. Populated with the return value
@@ -286,6 +300,11 @@ is built by the L</BUILD> method and it's output goes here
 
 An immutable simple string with no default. If set to a valid field name then
 that field will have focus when the form is rendered
+
+=item C<hidden>
+
+A hash reference containing hidden form elements added by the
+L<build|HTML::FormWidgets/build> process
 
 =item C<js_object>
 
@@ -302,7 +321,7 @@ function for translating strings into different languages
 =item C<list_key>
 
 An immutable non empty simple string that defaults to C<fields>. Used by
-L<build|/HTML::FormWidgets/build> it identifies which attribute contains
+L<build|HTML::FormWidgets/build> it identifies which attribute contains
 the list widgets for each region on the form
 
 =item C<literal_js>
@@ -437,7 +456,7 @@ Peter Flanigan, C<< <pjfl@cpan.org> >>
 
 =head1 License and Copyright
 
-Copyright (c) 2015 Peter Flanigan. All rights reserved
+Copyright (c) 2016 Peter Flanigan. All rights reserved
 
 This program is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself. See L<perlartistic>
