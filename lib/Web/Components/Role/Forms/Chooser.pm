@@ -4,7 +4,7 @@ use namespace::autoclean;
 
 use Class::Usul::Constants qw( FALSE NUL TRUE );
 use Class::Usul::Functions qw( pad );
-use Class::Usul::Response::Table;
+use App::MCP::Response::Table;
 use Moo::Role;
 
 # Private functions
